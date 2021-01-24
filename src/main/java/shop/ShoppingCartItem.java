@@ -1,15 +1,17 @@
 package shop;
 
-import org.jetbrains.annotations.NotNull;
+
+import shop.history.HistoryStack;
+import shop.history.HistoryState;
 
 import java.math.BigDecimal;
 
 public class ShoppingCartItem {
     private final BigDecimal itemCost;
     private final Product product;
-    private final int quantity;
+    private int quantity;
 
-    public ShoppingCartItem(@NotNull Product product, double itemCost, int quantity) {
+    public ShoppingCartItem(Product product, double itemCost, int quantity) {
         this.itemCost = BigDecimal.valueOf(itemCost);
         this.product = product;
         this.quantity = quantity;
@@ -25,6 +27,21 @@ public class ShoppingCartItem {
 
     public BigDecimal itemCost() {
         return itemCost;
+    }
+
+    public void setQuantity(int newQuantity) {
+        int oldQuantity = this.quantity;
+
+
+        HistoryStack.addHistoryState(new HistoryState(() -> {
+            System.out.println("Undoing set quantity");
+            this.quantity = oldQuantity;
+        }, () -> {
+            System.out.println("Redoing set quantity");
+            this.quantity = newQuantity;
+        }));
+
+        this.quantity = newQuantity;
     }
 
     @Override
@@ -45,5 +62,14 @@ public class ShoppingCartItem {
         result = 31 * result + product.hashCode();
         result = 31 * result + quantity;
         return result;
+    }
+
+    @Override
+    public String toString() {
+        return "ShoppingCartItem{" +
+                "itemCost=" + itemCost +
+                ", product=" + product +
+                ", quantity=" + quantity +
+                '}';
     }
 }

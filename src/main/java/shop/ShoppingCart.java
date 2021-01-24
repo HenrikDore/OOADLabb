@@ -1,26 +1,32 @@
 package shop;
 
+import shop.discount.DiscountCondition;
+import shop.history.HistoryStack;
+import shop.history.HistoryState;
+
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 public class ShoppingCart {
 
-    private final Set<ShoppingCartItem> items = new HashSet<>();
+    final ArrayList<ShoppingCartItem> items = new ArrayList<>();
+    DiscountCondition discountCondition = new DiscountCondition(items);
 
     public void addCartItem(ShoppingCartItem item){
         items.add(item);
+        HistoryStack.addHistoryState(new HistoryState(() -> {
+            System.out.println("Removing: " + item.product().name());
+            items.remove(item);
+        }, () -> {
+            System.out.println("Adding back: " + item.product().name());
+            items.add(item);
+        }));
     }
 
-    public Stream<ShoppingCartItem> stream(){
-        return items.stream();
-    }
 
-    public BigDecimal calculatePrice(){
+    public static BigDecimal calculatePrice(ArrayList<ShoppingCartItem> items){
         var sum = BigDecimal.ZERO;
 
         for (var item: items) {
@@ -29,27 +35,25 @@ public class ShoppingCart {
         return sum;
     }
 
-    public void undo(){
-        //Undo the latest change to the ShoppingCart
-    }
-
-
-    public void redo(){
-        //Redo the latest change to the ShoppingCart
-    }
 
     public String receipt() {
-        String line = "--------------------------------\n";
-        StringBuilder sb = new StringBuilder();
-        sb.append(line);
-        var list = items.stream()
-                .sorted(Comparator.comparing(item -> item.product().name()))
-                .collect(Collectors.toList());
-        for (var each : list) {
-            sb.append(String.format("%-24s % 7.2f\n", each.product().name(), each.itemCost()));
+        if (discountCondition.getMostProfitDiscount() != null) {
+            return discountCondition.receipt();
+        } else {
+            String line = "-------------------------------------\n";
+            StringBuilder sb = new StringBuilder();
+            sb.append(line);
+            var list = items.stream()
+                    .sorted(Comparator.comparing(item -> item.product().name()))
+                    .collect(Collectors.toList());
+            for (var each : list) {
+                sb.append(String.format("%s %-24s % 7.2f \n", each.quantity() + "x", each.product().name(), each.itemCost().multiply(new BigDecimal(each.quantity()))));
+            }
+            sb.append(line);
+            sb.append(String.format("%28s% 8.2f", "TOTAL:", calculatePrice(items)));
+            return sb.toString();
         }
-        sb.append(line);
-        sb.append(String.format("%24s% 8.2f", "TOTAL:", calculatePrice()));
-        return sb.toString();
     }
+
+
 }
